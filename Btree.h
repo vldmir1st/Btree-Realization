@@ -5,9 +5,15 @@
 //где m - число ключей на этой странице
 //Все страницы-листья находятся на одном уровне
 
+struct SearchResult {
+	int index;
+	Node* node;
+};
+
 
 class Node {
 	friend class Btree;
+	friend SearchResult* Search(Node* node, int value);
 private:
 	int rank;
 	int* keys;
@@ -30,12 +36,9 @@ public:
 	Btree& operator = (Btree& S);
 	void Add(int value);
 	void Del(int value);	//замена на максимальный
-	bool Search(int value);
-	void Print();
+	void Print();	//в учебнике пример
 	//обход дерева
 	//перегрузка оператора +(объединение)
 
+
 };
-
-
-

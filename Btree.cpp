@@ -81,3 +81,16 @@ void Node::InsertNonFull(int value) {
 		children[i + 1]->InsertNonFull(value);
 	}
 }
+
+SearchResult* Btree::Search(int value) {
+	if (root == nullptr) { return nullptr; }
+	return root->Search(value);
+}
+
+SearchResult* Node::Search(int value) {
+	int i;
+	for (i = 0; (keys[i] < value && i < elCount); i++) { }
+	if (i < elCount && value == keys[i]) { return new SearchResult{ i, this }; }
+	if (leaf) { return nullptr; }
+	return children[i]->Search(value);
+}
