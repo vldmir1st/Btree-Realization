@@ -17,6 +17,7 @@ struct SearchResult {
 
 class Node {
 	friend class Btree;
+	friend Btree operator + (Btree& B1, Btree& B2);
 private:
 	int rank;
 	int* keys;
@@ -31,9 +32,12 @@ private:
 	~Node();
 	void InsertNonFull(int value);
 	void SplitChild(int index, Node* child);
+	void Traverse();
+	void TraverseForPlusOperator(Btree* TreeToAdd);
 };
 
 class Btree {
+	friend Btree operator + (Btree& B1, Btree& B2);
 private:
 	int rank;
 	Node* root;
@@ -41,11 +45,10 @@ public:
 	Btree(int rank = 2);
 	Btree(Btree& tree);
 	~Btree();
-	Btree& operator = (Btree& S);
+	Btree& operator = (const Btree& btree);
 	void Add(int value);
 	void Del(int value);	//замена на максимальный
-	void Print();	//в учебнике пример
+	void Print();
 	bool Search(int value);
-	//обход дерева (постфиксный)
-	//перегрузка оператора +(объединение)
+	void Traverse();	//обход дерева (постфиксный)
 };

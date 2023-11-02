@@ -123,12 +123,19 @@ Node::Node(Node& node) {
 	else { for (int i = 0; i < 2 * rank; i++) { children[i] = nullptr; } }
 }
 
-Btree& Btree::operator = (Btree& tree) {
-	if (this != &tree) {
+Btree& Btree::operator = (const Btree& tree) {
+	if (this != &tree && tree.root != nullptr) {
 		this->~Btree();
 		root = new Node(*tree.root);
 	}
+	this->rank = tree.rank;
 	return *this;
+}
+
+Btree::Btree(Btree& tree) {
+	rank = tree.rank;
+	if (tree.root != nullptr) { root = new Node(*tree.root); }
+	else { root = nullptr; }
 }
 
 void Btree::Print() {
@@ -138,9 +145,41 @@ void Btree::Print() {
 
 void Node::Print(int level) {
 	if (this != nullptr) {
-		for (int i = 0; i < level; i++) { std::cout << "\t\t"; }
+		for (int i = 0; i < level; i++) { std::cout << "\t"; }
 		for (int i = 0; i < elCount; i++) { printf("%3d", keys[i]); }
 		std::cout << "\n";
 		for (int i = 0; i <= elCount; i++) { children[i]->Print(level + 1); }
+	}
+}
+
+void Btree::Traverse() {
+	root->Traverse();
+	std::cout << "\n";
+}
+
+void Node::Traverse() {
+	if (this != nullptr) {
+		for (int i = 0; i < elCount; i++) {
+			children[i]->Traverse();
+			std::cout << keys[i] << " ";
+		}
+		children[elCount]->Traverse();
+	}
+}
+
+Btree operator + (Btree& B1, Btree& B2) {
+	if (B1.root == nullptr) { return {B2}; }
+	Btree B(B1);
+	if (B2.root != nullptr) { B2.root->TraverseForPlusOperator(&B);	}
+	return B;
+}
+
+void Node::TraverseForPlusOperator(Btree* TreeToAdd) {
+	if (this != nullptr) {
+		for (int i = 0; i < elCount; i++) {
+			children[i]->TraverseForPlusOperator(TreeToAdd);
+			TreeToAdd->Add(keys[i]);
+		}
+		children[elCount]->TraverseForPlusOperator(TreeToAdd);
 	}
 }
