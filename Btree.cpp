@@ -7,10 +7,23 @@ Btree::Btree(int rank) {
 
 Node::Node(int rank, bool leaf) {
 	this->rank = rank;
-	this->children = new Node*[2*rank];
+	this->children = new Node*[2 * rank];
+	for (int i = 0; i < 2 * rank; i++) { children[i] = nullptr; }
 	this->keys = new int[2*rank-1];
 	this->elCount = 0;
 	this->leaf = leaf;
+}
+
+Btree::~Btree() {
+	if (root != nullptr) {
+		delete root;
+		root = nullptr;
+	}
+}
+
+Node::~Node() {
+	delete[] keys;
+	for (int i = 0; i < elCount; i++) { delete children[i]; }
 }
 
 void Btree::Add(int value) {
@@ -37,7 +50,7 @@ void Node::SplitChild(int index, Node* child) {
 	Node* newChild = new Node(rank, child->leaf);
 	newChild->elCount = rank - 1;
 	for (int i = 0; i < rank-1; i++) {
-		newChild->keys[i + rank] = child->keys[i];
+		newChild->keys[i] = child->keys[i + rank];
 	}
 	if (!child->leaf) {
 		for (int i = 0; i < rank; i++) {
@@ -82,9 +95,10 @@ void Node::InsertNonFull(int value) {
 	}
 }
 
-SearchResult* Btree::Search(int value) {
-	if (root == nullptr) { return nullptr; }
-	return root->Search(value);
+bool Btree::Search(int value) {
+	if (root == nullptr) { return false; }
+	if (root->Search(value) == nullptr) { return false; }
+	return true;
 }
 
 SearchResult* Node::Search(int value) {
@@ -93,4 +107,40 @@ SearchResult* Node::Search(int value) {
 	if (i < elCount && value == keys[i]) { return new SearchResult{ i, this }; }
 	if (leaf) { return nullptr; }
 	return children[i]->Search(value);
+}
+
+Node::Node(Node& node) {
+	elCount = node.elCount;
+	leaf = node.leaf;
+	rank = node.rank;
+	keys = new int[2*rank-1];
+	for (int i = 0; i < elCount; i++) { keys[i] = node.keys[i]; }
+	children = new Node * [2 * rank];
+	if (!leaf) {
+		for (int i = 0; i <= elCount; i++) { children[i] = new Node(*node.children[i]); }
+		for (int i = elCount + 1; i < 2 * rank; i++) { children[i] = nullptr; }
+	}
+	else { for (int i = 0; i < 2 * rank; i++) { children[i] = nullptr; } }
+}
+
+Btree& Btree::operator = (Btree& tree) {
+	if (this != &tree) {
+		this->~Btree();
+		root = new Node(*tree.root);
+	}
+	return *this;
+}
+
+void Btree::Print() {
+	root->Print(0);
+	std::cout << "\n";
+}
+
+void Node::Print(int level) {
+	if (this != nullptr) {
+		for (int i = 0; i < level; i++) { std::cout << "\t\t"; }
+		for (int i = 0; i < elCount; i++) { printf("%3d", keys[i]); }
+		std::cout << "\n";
+		for (int i = 0; i <= elCount; i++) { children[i]->Print(level + 1); }
+	}
 }

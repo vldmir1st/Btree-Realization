@@ -1,44 +1,51 @@
 #pragma once
+
+#include <iostream>
+
 //Каждая страница содержит не более 2n-1 ключей
 //Каждая страница, кроме корневой, имееет не менее n-1 ключей
 //Каждая страница либо представляет собой лист, либо m+1 потомков,
 //где m - число ключей на этой странице
 //Все страницы-листья находятся на одном уровне
 
+class Node;
+
 struct SearchResult {
 	int index;
 	Node* node;
 };
 
-
 class Node {
 	friend class Btree;
-	friend SearchResult* Search(Node* node, int value);
 private:
 	int rank;
 	int* keys;
 	int elCount;
 	Node** children;
 	bool leaf;
-public:
+
+	SearchResult* Search(int value);  //может вернуть null
+	void Print(int level);
 	Node(int rank, bool leaf);
+	Node(Node& node);
+	~Node();
 	void InsertNonFull(int value);
 	void SplitChild(int index, Node* child);
 };
 
-class Btree {		//обход постфиксный(обратный)
+class Btree {
 private:
 	int rank;
 	Node* root;
 public:
 	Btree(int rank = 2);
 	Btree(Btree& tree);
+	~Btree();
 	Btree& operator = (Btree& S);
 	void Add(int value);
 	void Del(int value);	//замена на максимальный
 	void Print();	//в учебнике пример
-	//обход дерева
+	bool Search(int value);
+	//обход дерева (постфиксный)
 	//перегрузка оператора +(объединение)
-
-
 };
