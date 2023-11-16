@@ -23,7 +23,8 @@ Btree::~Btree() {
 
 Node::~Node() {
 	delete[] keys;
-	for (int i = 0; i < elCount; i++) { delete children[i]; }
+	for (int i = 0; i <= elCount; i++)
+		delete children[i];
 }
 
 void Btree::Add(int value) {
@@ -71,8 +72,7 @@ void Node::SplitChild(int index, Node* child) {
 
 void Node::InsertNonFull(int value) {
 	int i = elCount - 1;
-	if (leaf)
-	{
+	if (leaf) {
 		while (i >= 0 && keys[i] > value)
 		{
 			keys[i + 1] = keys[i];
@@ -81,8 +81,7 @@ void Node::InsertNonFull(int value) {
 		keys[i + 1] = value;
 		elCount++;
 	}
-	else
-	{
+	else {
 		while (i >= 0 && keys[i] > value)
 			i--;
 		if (children[i + 1]->elCount == 2 * rank - 1)
@@ -132,15 +131,19 @@ Btree& Btree::operator = (const Btree& tree) {
 	return *this;
 }
 
-Btree::Btree(Btree& tree) {
+Btree::Btree(const Btree& tree) {
 	rank = tree.rank;
 	if (tree.root != nullptr) { root = new Node(*tree.root); }
 	else { root = nullptr; }
 }
 
 void Btree::Print() {
-	root->Print(0);
-	std::cout << "\n";
+	if (root != nullptr) {
+		root->Print(0);
+		std::cout << "\n";
+	}
+	else
+		std::cout << "The tree is empty\n";
 }
 
 void Node::Print(int level) {
@@ -167,7 +170,7 @@ void Node::Traverse() {
 	}
 }
 
-Btree operator + (Btree& B1, Btree& B2) {
+Btree operator + (const Btree& B1, const Btree& B2) {
 	if (B1.root == nullptr) { return {B2}; }
 	Btree B(B1);
 	if (B2.root != nullptr) { B2.root->TraverseForPlusOperator(&B);	}
@@ -182,4 +185,166 @@ void Node::TraverseForPlusOperator(Btree* TreeToAdd) {
 		}
 		children[elCount]->TraverseForPlusOperator(TreeToAdd);
 	}
+}
+
+void Btree::Del(int value) {
+	if (!root) {
+		std::cout << "The tree is empty\n";
+		return;
+	}
+	root->Remove(value);
+	if (root->elCount == 0) {
+		Node* tmp = root;
+		if (root->leaf)
+			root = nullptr;
+		else
+			root = root->children[0];
+
+		//чтобы деструктор не начал удалять нижние ноды
+		for (int i = 0; i <= tmp->elCount; i++)
+			tmp->children[i] = nullptr;
+
+		delete tmp;
+	}
+}
+
+void Node::Remove(int value) {
+	int index = FindKey(value);
+	if (index < elCount && keys[index] == value) {
+		if (leaf)
+			RemoveFromLeaf(index);
+		else
+			RemoveFromNonLeaf(index);
+	}
+	else {
+		if (leaf) {
+			std::cout << "The key " << value << " is does not exist in the tree\n";
+			return;
+		}
+		bool flag = ((index == elCount) ? true : false);
+		if (children[index]->elCount < rank)
+			Fill(index);
+		if (flag && index > elCount)
+			children[index - 1]->Remove(value);
+		else
+			children[index]->Remove(value);
+	}
+	return;
+}
+
+int Node::FindKey(int value) {
+	int index = 0;
+	while (index < elCount && keys[index] < value)
+		++index;
+	return index;
+}
+
+void Node::RemoveFromLeaf(int index) {
+	for (int i = index + 1; i < elCount; ++i)
+		keys[i - 1] = keys[i];
+	elCount--;
+}
+
+void Node::RemoveFromNonLeaf(int index) {
+	int key = keys[index];
+	if (children[index + 1]->elCount >= rank) {
+		int succ = GetSuccessor(index);
+		keys[index] = succ;
+		children[index + 1]->Remove(succ);
+	}
+	else if (children[index]->elCount >= rank) {
+		int pred = GetPredecessor(index);
+		keys[index] = pred;
+		children[index]->Remove(pred);
+	}
+	else {
+		Merge(index);
+		children[index]->Remove(key);
+	}
+}
+
+int Node::GetSuccessor(int index) {
+	Node* cur = children[index + 1];
+	while (!cur->leaf)
+		cur = cur->children[0];
+	return cur->keys[0];
+}
+
+int Node::GetPredecessor(int index) {
+	Node* cur = children[index];
+	while (!cur->leaf)
+		cur = cur->children[cur->elCount];
+	return cur->keys[cur->elCount - 1];
+}
+
+void Node::Merge(int index) {
+	Node* child = children[index];
+	Node* sibling = children[index + 1];
+	child->keys[rank - 1] = keys[index];
+	for (int i = 0; i < sibling->elCount; ++i)
+		child->keys[i + rank] = sibling->keys[i];
+	if (!child->leaf) {
+		for (int i = 0; i <= sibling->elCount; ++i)
+			child->children[i + rank] = sibling->children[i];
+	}
+	for (int i = index + 1; i < elCount; ++i)
+		keys[i - 1] = keys[i];
+	for (int i = index + 2; i <= elCount; ++i)
+		children[i - 1] = children[i];
+	child->elCount += sibling->elCount + 1;
+	elCount--;
+
+	//чтобы вызванный ниже деструктор не удалил детей, которые были перенесены к другому ноду
+	for (int i = 0; i <= sibling->elCount; i++)
+		sibling->children[i] = nullptr;
+	
+	delete(sibling);
+}
+
+void Node::Fill(int index) {
+	if (index != 0 && children[index - 1]->elCount >= rank)
+		BorrowFromPrev(index);
+	else if (index != elCount && children[index + 1]->elCount >= rank)
+		BorrowFromNext(index);
+	else {
+		if (index != elCount)
+			Merge(index);
+		else
+			Merge(index - 1);
+	}
+}
+
+void Node::BorrowFromPrev(int index) {
+	Node* child = children[index];
+	Node* sibling = children[index - 1];
+	for (int i = child->elCount - 1; i >= 0; --i)
+		child->keys[i + 1] = child->keys[i];
+	if (!child->leaf) {
+		for (int i = child->elCount; i >= 0; --i)
+			child->children[i + 1] = child->children[i];
+	}
+	child->keys[0] = keys[index - 1];
+	if (!child->leaf)
+		child->children[0] = sibling->children[sibling->elCount];
+	keys[index - 1] = sibling->keys[sibling->elCount - 1];
+
+	child->elCount += 1;
+	sibling->elCount -= 1;
+}
+
+void Node::BorrowFromNext(int index) {
+	Node* child = children[index];
+	Node* sibling = children[index + 1];
+	child->keys[(child->elCount)] = keys[index];
+	if (!(child->leaf))
+		child->children[(child->elCount) + 1] = sibling->children[0];
+	keys[index] = sibling->keys[0];
+	for (int i = 1; i < sibling->elCount; ++i)
+		sibling->keys[i - 1] = sibling->keys[i];
+	if (!sibling->leaf) {
+		for (int i = 1; i <= sibling->elCount; ++i)
+			sibling->children[i - 1] = sibling->children[i];
+	}
+	child->elCount += 1;
+	sibling->elCount -= 1;
 }

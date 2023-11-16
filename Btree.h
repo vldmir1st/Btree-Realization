@@ -17,7 +17,7 @@ struct SearchResult {
 
 class Node {
 	friend class Btree;
-	friend Btree operator + (Btree& B1, Btree& B2);
+	friend Btree operator + (const Btree& B1, const Btree& B2);
 private:
 	int rank;
 	int* keys;
@@ -34,16 +34,26 @@ private:
 	void SplitChild(int index, Node* child);
 	void Traverse();
 	void TraverseForPlusOperator(Btree* TreeToAdd);
+	void Remove(int value);
+	int FindKey(int value);
+	void RemoveFromLeaf(int index);
+	void RemoveFromNonLeaf(int index);
+	int GetSuccessor(int index);
+	int GetPredecessor(int index);
+	void Merge(int index);
+	void Fill(int index);
+	void BorrowFromPrev(int index);
+	void BorrowFromNext(int index);
 };
 
 class Btree {
-	friend Btree operator + (Btree& B1, Btree& B2);
+	friend Btree operator + (const Btree& B1, const Btree& B2);
 private:
 	int rank;
 	Node* root;
 public:
 	Btree(int rank = 2);
-	Btree(Btree& tree);
+	Btree(const Btree& tree);
 	~Btree();
 	Btree& operator = (const Btree& btree);
 	void Add(int value);
